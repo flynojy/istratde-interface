@@ -1,0 +1,6 @@
+evox==1.1.1
+numba==0.64.0
+scipy==1.17.1
+h5py==3.16.0
+matplotlib==3.10.8
+tensorboard==2.20.0

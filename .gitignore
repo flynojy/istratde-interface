@@ -1,0 +1,15 @@
+runtime/
+save_dir/
+tmp/
+pip-cache/
+.venv-istratde/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.tmp
+*.pdf
+*.png
+*.h5
