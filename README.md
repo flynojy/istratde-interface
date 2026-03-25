@@ -194,6 +194,7 @@ bash ./run_brax_paper_ubuntu.sh
 
 - Brax 说明：[`README_BRAX.md`](/D:/my_workspace/demo_1/README_BRAX.md)
 - 接口映射：[`INTERFACE_MAP.md`](/D:/my_workspace/demo_1/INTERFACE_MAP.md)
+- 服务器部署目录说明：[`SERVER_DEPLOYMENT_LAYOUT.md`](/D:/my_workspace/demo_1/SERVER_DEPLOYMENT_LAYOUT.md)
 
 ## 致谢
 
