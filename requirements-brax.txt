@@ -1,0 +1,6 @@
+# JAX CUDA wheels should be installed separately on Ubuntu/Linux.
+brax==0.12.1
+mujoco==3.2.7
+flax==0.8.5
+optax==0.2.3
+orbax-checkpoint==0.6.1

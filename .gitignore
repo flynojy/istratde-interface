@@ -3,6 +3,7 @@ save_dir/
 tmp/
 pip-cache/
 .venv-istratde/
+.venv-brax/
 __pycache__/
 **/__pycache__/
 *.pyc

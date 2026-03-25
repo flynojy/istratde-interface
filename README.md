@@ -1,199 +1,203 @@
-# iStratDE Interface
+# iStratDE Interface Adapter
 
-这是一个面向实验复现和工程接入的适配仓库，目标是把 `iStratDE` 接入到本地已有的 `problem/options -> optimize()` 优化接口中，同时保留 `MMES` 作为基线算法，方便在同一套测试框架下直接对比。
+这是一个面向实验复现与服务器部署的 iStratDE 适配仓库。
 
-本仓库目前主要围绕 `CEC2013 LSGO` 测试问题展开，并支持：
+本仓库的核心目标不是重写上游 `istratde`，而是把它整理成实验室现有流程更容易接入的形式：
 
-- 使用 `ISTRATDE` 作为优化器运行现有测试脚本
-- 使用 `MMES` 作为基线进行公平对照
-- 输出结果表、收敛曲线和简单 profiling 信息
-- 在 Windows 环境下通过 PyTorch CUDA 后端调用 GPU
+- 保留本地已有的 `problem/options -> optimize()` 调用习惯
+- 在 `CEC2013 LSGO` 上用统一入口对接 `MMES` 和 `iStratDE`
+- 新增独立的 `Brax` 论文复现实验入口
+- 为后续迁移到 Ubuntu / 实验室 GPU 服务器做准备
 
-## 项目亮点
+## 当前完成的能力
 
-- 保留原有接口习惯  
-  外层仍然使用 `problem/options -> optimize()` 风格，不需要把整套调用链改写成原始 iStratDE 示例形式。
+- `iStratDE` 已通过适配器接入本地优化器接口
+- `CEC2013LSGO` 已支持批量跑 `F1 -> F15`
+- `iStratDE` 已支持 PyTorch CUDA 后端
+- 已支持基础 profiling 输出，区分算法时间和评估时间
+- 已补齐 Brax 论文复现实验入口
+- 已补齐 Ubuntu 环境脚本，便于后续部署到服务器
 
-- 支持 iStratDE / MMES 直接切换  
-  同一个 `test.py` 入口下即可切换算法，方便做对照实验。
+## 核心接口总览
 
-- 支持 GPU 算法后端  
-  `iStratDE` 当前通过 PyTorch CUDA 后端运行，能够在 NVIDIA GPU 上完成种群更新与演化过程。
+### 1. 统一优化器接口
 
-- 自带实验脚本  
-  提供单算法运行脚本和对照运行脚本，方便快速复现实验。
+核心适配文件：
 
-## 当前实现边界
+- [`MMES/istratde_optimizer.py`](/D:/my_workspace/demo_1/MMES/istratde_optimizer.py)
 
-当前这套接法是“混合模式”：
+外部接口保持为：
 
-- `iStratDE` 算法更新：GPU
-- `cec2013lsgo` 目标函数评估：CPU
+```python
+from MMES.istratde_optimizer import IStratDEOptimizer
 
-也就是说，当前已经启用了 CUDA，但 GPU 利用率不一定很高。这是因为 `cec2013lsgo` 这部分仍然主要基于 `NumPy + Numba`，瓶颈通常在 benchmark 评估而不是优化器本身。
+optimizer = IStratDEOptimizer(problem, options)
+results = optimizer.optimize()
+```
 
-如果后续希望进一步放大 iStratDE 的 GPU 优势，需要继续把 benchmark 评估层改写成 `torch` 或 `jax` 原生实现。
+其中：
+
+- `problem` 负责提供目标函数、维度和边界
+- `options` 负责提供种群规模、随机种子、后端和终止条件
+- `results` 返回 best fitness、评估次数、运行时间和 profiling 信息
+
+这层是本仓库最重要的接口整理结果，也是后续接入实验室服务器时最值得保留的部分。
+
+### 2. CEC 实验入口
+
+统一实验入口：
+
+- [`test.py`](/D:/my_workspace/demo_1/test.py)
+
+相关脚本：
+
+- [`run_test_istratde.bat`](/D:/my_workspace/demo_1/run_test_istratde.bat)
+- [`run_compare_f15.bat`](/D:/my_workspace/demo_1/run_compare_f15.bat)
+- [`compare_results.py`](/D:/my_workspace/demo_1/compare_results.py)
+
+当前默认支持：
+
+- `F1 -> F15`
+- `MMES / ISTRATDE` 切换
+- 进度输出
+- profiling 输出
+- 结果曲线和文本统计
+
+### 3. Brax 论文复现实验入口
+
+核心文件：
+
+- [`brax_paper_benchmark.py`](/D:/my_workspace/demo_1/brax_paper_benchmark.py)
+
+运行脚本：
+
+- Windows: [`run_brax_paper.bat`](/D:/my_workspace/demo_1/run_brax_paper.bat)
+- Ubuntu: [`setup_brax_ubuntu.sh`](/D:/my_workspace/demo_1/setup_brax_ubuntu.sh)
+- Ubuntu: [`run_brax_paper_ubuntu.sh`](/D:/my_workspace/demo_1/run_brax_paper_ubuntu.sh)
+
+当前设计目标是贴近论文中的 Brax 实验：
+
+- 环境：`swimmer`, `hopper`, `reacher`
+- 停止条件：按运行时长，而不是固定函数评估次数
+- 输出：reward history、曲线图、summary、最佳策略权重
 
 ## 仓库结构
 
 ```text
 demo_1/
-├─ MMES/                    # 本地优化器框架与 iStratDE 适配层
-├─ cec2013lsgo/            # CEC2013 LSGO 测试函数
-├─ istratde-main/          # 上游 iStratDE 源码
-├─ test.py                 # 主实验入口
-├─ utils.py                # 结果记录与绘图工具
-├─ run_test_istratde.bat   # 单独运行 iStratDE
-├─ run_compare_f15.bat     # MMES vs ISTRATDE 对照入口
-├─ compare_results.py      # 汇总最近一次对照结果
-├─ check_portable_env.py   # 环境检查脚本
-├─ requirements.txt        # 除 PyTorch 外的依赖
-└─ README.md
+|-- MMES/
+|   |-- optimizer.py
+|   |-- mmes.py
+|   `-- istratde_optimizer.py
+|-- cec2013lsgo/
+|-- istratde-main/
+|-- test.py
+|-- utils.py
+|-- brax_paper_benchmark.py
+|-- compare_results.py
+|-- run_test_istratde.bat
+|-- run_compare_f15.bat
+|-- run_brax_paper.bat
+|-- setup_brax_ubuntu.sh
+|-- run_brax_paper_ubuntu.sh
+|-- requirements.txt
+|-- requirements-brax.txt
+|-- README.md
+|-- README_BRAX.md
+`-- INTERFACE_MAP.md
 ```
 
-## 环境要求
+## 快速开始
 
-推荐环境：
+### Windows 下运行 CEC
 
-- Windows 10 / 11
-- Python 3.13
-- NVIDIA GPU
-- 正常安装的 NVIDIA 驱动
-
-## 安装方式
-
-建议使用独立 Python 环境。
-
-### 1. 安装 CUDA 版 PyTorch
+安装 CUDA 版 PyTorch：
 
 ```powershell
 python -m pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 ```
 
-### 2. 安装其余依赖
+安装其余依赖：
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-## 快速开始
-
-### 运行 iStratDE
+直接运行：
 
 ```powershell
 .\run_test_istratde.bat
 ```
 
-### 运行 MMES 与 ISTRATDE 对照实验
+### Ubuntu 下运行 Brax
 
-```powershell
-.\run_compare_f15.bat
+推荐环境：
+
+- Ubuntu 22.04 / 24.04
+- Python 3.10 到 3.12
+- NVIDIA 驱动正常
+- CUDA 可用
+
+安装环境：
+
+```bash
+bash ./setup_brax_ubuntu.sh
 ```
 
-## 常用参数
+快速验证：
 
-可通过环境变量修改实验配置：
-
-```powershell
-$env:DEMO_OPTIMIZER="ISTRATDE"
-$env:ISTRATDE_BACKEND="torch"
-$env:POP_SIZE="1000"
-$env:MAX_FES="1E6"
-$env:CYCLE_NUM="1"
-$env:FUN_ID_START="15"
-$env:FUN_ID_END="15"
-$env:VERBOSE_EVERY="100"
-.\run_test_istratde.bat
+```bash
+BRAX_ENVS=swimmer BRAX_TIME_BUDGET_MINUTES=5 bash ./run_brax_paper_ubuntu.sh
 ```
 
-切换回 MMES：
+完整运行：
 
-```powershell
-$env:DEMO_OPTIMIZER="MMES"
-.\run_test_istratde.bat
+```bash
+bash ./run_brax_paper_ubuntu.sh
 ```
 
-## 运行输出说明
+## 服务器接入建议
 
-脚本启动后会输出：
+如果后续要接入实验室服务器，建议直接围绕下面这几层展开：
 
-- 当前优化器
-- iStratDE 后端类型
-- PyTorch 版本
-- CUDA 是否可用
-- 当前 GPU 名称
+1. 保留本仓库的适配层  
+重点保留 [`MMES/istratde_optimizer.py`](/D:/my_workspace/demo_1/MMES/istratde_optimizer.py)、[`test.py`](/D:/my_workspace/demo_1/test.py)、[`brax_paper_benchmark.py`](/D:/my_workspace/demo_1/brax_paper_benchmark.py)。
 
-实验过程中还会输出：
+2. 优先迁移到 Ubuntu 环境  
+尤其是 Brax。`Windows + Python 3.13` 不适合做 Brax/JAX 论文复现，服务器推荐 `Ubuntu + Python 3.10~3.12 + CUDA`。
 
-- `generation`
-- `evaluations`
-- `best_so_far_y`
+3. 分开维护两类任务  
+- `CEC2013LSGO`：保留当前本地接口风格
+- `Brax`：保留当前独立实验入口风格
 
-运行结束后会输出一段 profiling 信息，例如：
-
-- 总 step 时间
-- evaluation pipeline 时间
-- algorithm/framework 时间
-
-这些信息有助于判断时间主要花在：
-
-- 优化器本身
-- 还是 benchmark 评估
-
-## 结果文件说明
-
-运行结束后，通常会在 `save_dir/baseline/...` 下生成：
-
-- `result_record.txt`
-- `evaluation_curves_best_so_far.pdf`
-- `evaluation_curves_best_so_far.png`
-
-这些结果表示的是优化问题中的：
-
-- 函数评估次数（FEs）
-- best-so-far objective value
-
-它不是分类准确率或模型“打分”，而是 benchmark 的目标函数值。  
-在当前 `CEC2013LSGO` 问题里，一般是 **越小越好**。
-
-## 主要实现文件
-
-- `MMES/istratde_optimizer.py`  
-  将 iStratDE 适配到本地 `Optimizer` 风格接口
-
-- `test.py`  
-  主实验入口，支持 `MMES` / `ISTRATDE` 切换
-
-- `utils.py`  
-  结果记录、绘图和汇总工具
-
-- `compare_results.py`  
-  汇总最近一次 MMES 与 ISTRATDE 的对照结果
-
-## 建议忽略的本地产物
-
-以下目录或文件通常不建议上传：
-
-- `runtime/`
-- `save_dir/`
-- `tmp/`
-- `pip-cache/`
-- `.venv-istratde/`
-- `__pycache__/`
-
-这些内容要么体积大，要么是本地缓存或实验产物，不适合作为源码仓库的一部分。
-
-## 后续可扩展方向
-
+4. 后续可继续做的优化  
 - 将 `cec2013lsgo` 评估层改写为 GPU 原生实现
-- 增加更多函数的自动对照实验
-- 增加多次独立运行统计和统一汇总表
-- 增加更完整的实验配置管理
+- 补齐服务器批量调度脚本
+- 接入实验日志系统
+
+## 当前边界
+
+### CEC
+
+当前链路是：
+
+- `iStratDE` 算法侧：GPU
+- `cec2013lsgo` 评估侧：CPU
+
+所以现在已经能跑 GPU，但不是全链路纯 GPU。
+
+### Brax
+
+当前仓库已经补齐 Brax 入口，但真实运行更推荐在 Ubuntu 上完成。
+
+## 相关文档
+
+- Brax 说明：[`README_BRAX.md`](/D:/my_workspace/demo_1/README_BRAX.md)
+- 接口映射：[`INTERFACE_MAP.md`](/D:/my_workspace/demo_1/INTERFACE_MAP.md)
 
 ## 致谢
 
-- 上游 `iStratDE`
+- 上游 [`istratde-main`](/D:/my_workspace/demo_1/istratde-main)
 - `MMES`
-- `CEC2013 LSGO` benchmark
-
-本仓库的工作重点是接口适配、工程集成与实验组织，而不是替代这些原始项目本身。
+- `CEC2013 LSGO`
+- `Brax`

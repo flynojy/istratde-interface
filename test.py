@@ -16,7 +16,7 @@ ISTRATDE_BACKEND = os.environ.get("ISTRATDE_BACKEND", "torch")
 POP_SIZE = int(os.environ.get("POP_SIZE", "1000"))
 MAX_FES = float(os.environ.get("MAX_FES", "1E6"))
 CYCLE_NUM = int(os.environ.get("CYCLE_NUM", "10"))
-FUN_ID_START = int(os.environ.get("FUN_ID_START", "15"))
+FUN_ID_START = int(os.environ.get("FUN_ID_START", "1"))
 FUN_ID_END = int(os.environ.get("FUN_ID_END", "15"))
 USE_PROCESS_POOL = os.environ.get("USE_PROCESS_POOL", "1") == "1"
 VERBOSE_EVERY = int(os.environ.get("VERBOSE_EVERY", "1000"))

@@ -26,7 +26,7 @@ if "%USE_PROCESS_POOL%"=="" set "USE_PROCESS_POOL=0"
 if "%POP_SIZE%"=="" set "POP_SIZE=1000"
 if "%MAX_FES%"=="" set "MAX_FES=1E6"
 if "%CYCLE_NUM%"=="" set "CYCLE_NUM=1"
-if "%FUN_ID_START%"=="" set "FUN_ID_START=15"
+if "%FUN_ID_START%"=="" set "FUN_ID_START=1"
 if "%FUN_ID_END%"=="" set "FUN_ID_END=15"
 if "%VERBOSE_EVERY%"=="" set "VERBOSE_EVERY=1000"
 
